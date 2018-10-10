@@ -19,6 +19,8 @@ import javax.swing.JOptionPane;
 import java.awt.Font;
 import java.sql.Statement;
 import java.awt.Color;
+import javax.swing.UIManager;
+import java.awt.SystemColor;
 
 public class Gui implements ActionListener {
 
@@ -35,6 +37,8 @@ public class Gui implements ActionListener {
 	private JButton btnClear;
 	private JButton btnNext;
 	private JButton btnAdd;
+	private JButton btnFirst;
+	private JButton btnLast;
 	private DBConnection dbc;
 	private ResultSet rs;
 	private Statement st;
@@ -64,6 +68,7 @@ public class Gui implements ActionListener {
 				addressField.setText(rs.getString("address"));
 				salaryField.setText(rs.getString("salary"));
 				genderField.setText(rs.getString("gender"));
+				ssnTemp = ssnField.getText();
 			}
 		}
 		catch (SQLException e) {
@@ -85,6 +90,7 @@ public class Gui implements ActionListener {
 	 */
 	private void initialize() {
 		frame = new JFrame();
+		frame.getContentPane().setForeground(SystemColor.text);
 		frame.getContentPane().setBackground(new Color(216, 191, 216));
 		frame.setBounds(100, 100, 700, 500);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -155,6 +161,19 @@ public class Gui implements ActionListener {
 		frame.getContentPane().add(btnClear);
 		btnClear.addActionListener(this);
 
+		btnFirst = new JButton("First Entry");
+		btnFirst.setForeground(Color.ORANGE);
+		btnFirst.setBackground(Color.GRAY);
+		btnFirst.setBounds(185, 330, 90, 41);
+		frame.getContentPane().add(btnFirst);
+		btnFirst.addActionListener(this);
+
+		btnLast = new JButton("Last Entry");
+		btnLast.setForeground(Color.ORANGE);
+		btnLast.setBounds(395, 330, 87, 41);
+		frame.getContentPane().add(btnLast);
+		btnLast.addActionListener(this);
+
 		JLabel lblSsn = new JLabel("SSn");
 		lblSsn.setBounds(95, 100, 61, 16);
 		frame.getContentPane().add(lblSsn);
@@ -189,7 +208,11 @@ public class Gui implements ActionListener {
 			System.out.println("You pressed NEXT");
 
 			try {
-				if (rs.next()) {
+				if (rs.isLast()) {
+					// Do nothing, stop running into after last area
+				}
+				else if (rs.next()) {
+
 					// Update Text fields
 					ssnField.setText(rs.getString("ssn"));
 					dobField.setText(rs.getString("dob"));
@@ -197,6 +220,7 @@ public class Gui implements ActionListener {
 					addressField.setText(rs.getString("address"));
 					salaryField.setText(rs.getString("salary"));
 					genderField.setText(rs.getString("gender"));
+					ssnTemp = ssnField.getText();
 				}
 			}
 			catch (SQLException e1) {
@@ -209,7 +233,11 @@ public class Gui implements ActionListener {
 			System.out.println("You pressed PREVIOUS");
 
 			try {
-				if (rs.previous()) {
+				if (rs.isFirst()) {
+					// Do nothing, stop running into before first area
+				}
+				else if (rs.previous()) {
+
 					// Update Text fields
 					ssnField.setText(rs.getString("ssn"));
 					dobField.setText(rs.getString("dob"));
@@ -217,6 +245,7 @@ public class Gui implements ActionListener {
 					addressField.setText(rs.getString("address"));
 					salaryField.setText(rs.getString("salary"));
 					genderField.setText(rs.getString("gender"));
+					ssnTemp = ssnField.getText();
 				}
 			}
 			catch (SQLException e1) {
@@ -243,62 +272,83 @@ public class Gui implements ActionListener {
 
 		else if (e.getSource() == btnAdd) {
 			System.out.println("You pressed ADD");
-			try {
-				nameTemp = nameField.getText();
-				st.executeUpdate("INSERT INTO Employee VALUES(" + ssnField.getText() + "," + "'" + dobField.getText().toString() + "'" + ","
-						+ "'" + nameField.getText().toString() + "'" + "," + "'" + addressField.getText().toString() + "'" + ","
-						+ salaryField.getText() + "," + "'" + genderField.getText().toString() + "'" + ")");
-				dbc.connect(); // reconnect to allow user to continue
-				update();
-				if (rs.next()) {
-					// Update Text fields
-					ssnField.setText(rs.getString("ssn"));
-					dobField.setText(rs.getString("dob"));
-					nameField.setText(rs.getString("name"));
-					addressField.setText(rs.getString("address"));
-					salaryField.setText(rs.getString("salary"));
-					genderField.setText(rs.getString("gender"));
-				}
-				JOptionPane.showMessageDialog(frame, nameTemp + " has been added to the database"); // confirmation
-																									// dialogue
-			}
-			catch (SQLException e1) {
-				JOptionPane.showMessageDialog(frame, "error: " + e1.getMessage()); // show error and allow user to
-																					// continue
-				dbc.connect();
-				update();
 
+			// Validate inputs to ensure they are allowed
+			if (ValidateInput()) {
+
+				try {
+					nameTemp = nameField.getText();
+					st.executeUpdate("INSERT INTO Employee VALUES(" + ssnField.getText() + "," + "'" + dobField.getText().toString() + "'"
+							+ "," + "'" + nameField.getText().toString() + "'" + "," + "'" + addressField.getText().toString() + "'" + ","
+							+ salaryField.getText() + "," + "'" + genderField.getText().toString() + "'" + ")");
+					dbc.connect(); // reconnect to allow user to continue
+					update();
+					if (rs.next()) {
+						// Update Text fields
+						ssnField.setText(rs.getString("ssn"));
+						dobField.setText(rs.getString("dob"));
+						nameField.setText(rs.getString("name"));
+						addressField.setText(rs.getString("address"));
+						salaryField.setText(rs.getString("salary"));
+						genderField.setText(rs.getString("gender"));
+					}
+					JOptionPane.showMessageDialog(frame, nameTemp + " has been added to the database"); // confirmation
+																										// dialogue
+				}
+				catch (SQLException e1) {
+					JOptionPane.showMessageDialog(frame, "error: " + e1.getMessage()); // show error and allow user to
+																						// continue
+					dbc.connect();
+					update();
+
+				}
 			}
+
 		}
 
 		else if (e.getSource() == btnUpdate) {
+
 			System.out.println("You pressed Update");
-			System.out.println("UPDATE Employee SET name = " + nameField.getText() + " WHERE ssn = " + "'" + ssnField.getText() + "'");
-			try {
-				ssnTemp = ssnField.getText();
-				st.executeUpdate("UPDATE Employee SET name = " + "'" + nameField.getText() + "'" + " WHERE ssn = " + ssnField.getText());
-				dbc.connect();// reconnect to allow user to continue
-				update();
-				if (rs.next()) {
-					// Update Text fields
-					ssnField.setText(rs.getString("ssn"));
-					dobField.setText(rs.getString("dob"));
-					nameField.setText(rs.getString("name"));
-					addressField.setText(rs.getString("address"));
-					salaryField.setText(rs.getString("salary"));
-					genderField.setText(rs.getString("gender"));
+			// Validate inputs to ensure they are allowed
+			if (ValidateInput()) {
+				try {
+
+					st.executeUpdate(
+							"UPDATE Employee SET name = " + "'" + nameField.getText() + "'" + " WHERE ssn = " + "'" + ssnTemp + "'");
+					st.executeUpdate("UPDATE Employee SET dob = " + "'" + dobField.getText() + "'" + " WHERE ssn = " + "'" + ssnTemp + "'");
+					st.executeUpdate(
+							"UPDATE Employee SET address = " + "'" + addressField.getText() + "'" + " WHERE ssn = " + "'" + ssnTemp + "'");
+					st.executeUpdate(
+							"UPDATE Employee SET salary = " + "'" + salaryField.getText() + "'" + " WHERE ssn = " + "'" + ssnTemp + "'");
+					st.executeUpdate(
+							"UPDATE Employee SET gender = " + "'" + genderField.getText() + "'" + " WHERE ssn = " + "'" + ssnTemp + "'");
+					System.out.println(
+							"UPDATE Employee SET ssn = " + ssnField.getText() + " WHERE ssn = " + "'" + ssnField.getText() + "'" + ssnTemp);
+					st.executeUpdate("UPDATE Employee SET ssn = " + "'" + ssnField.getText() + "'" + " WHERE ssn = " + "'" + ssnTemp + "'");
+					ssnTemp = ssnField.getText();
+					dbc.connect();// reconnect to allow user to continue
+					update();
+					if (rs.next()) {
+						// Update Text fields
+						ssnField.setText(rs.getString("ssn"));
+						dobField.setText(rs.getString("dob"));
+						nameField.setText(rs.getString("name"));
+						addressField.setText(rs.getString("address"));
+						salaryField.setText(rs.getString("salary"));
+						genderField.setText(rs.getString("gender"));
+					}
+
+					JOptionPane.showMessageDialog(frame, "The SSn: " + ssnTemp + " has been successfully updated");
+				}
+				catch (SQLException e1) {
+					// TODO Auto-generated catch block
+					JOptionPane.showMessageDialog(frame, "error: " + e1.getMessage());
+					dbc.connect();
+					update();
+
 				}
 
-				JOptionPane.showMessageDialog(frame, "The SSn: " + ssnTemp + " has been successfully updated");
 			}
-			catch (SQLException e1) {
-				// TODO Auto-generated catch block
-				JOptionPane.showMessageDialog(frame, "error: " + e1.getMessage());
-				dbc.connect();
-				update();
-
-			}
-
 		}
 
 		else if (e.getSource() == btnDelete) {
@@ -335,6 +385,52 @@ public class Gui implements ActionListener {
 
 		}
 
+		else if (e.getSource() == btnLast) {
+			System.out.println("You pressed Last");
+
+			try {
+
+				if (rs.last()) {
+					// Update Text fields
+					ssnField.setText(rs.getString("ssn"));
+					dobField.setText(rs.getString("dob"));
+					nameField.setText(rs.getString("name"));
+					addressField.setText(rs.getString("address"));
+					salaryField.setText(rs.getString("salary"));
+					genderField.setText(rs.getString("gender"));
+					ssnTemp = ssnField.getText();
+				}
+			}
+			catch (SQLException e1) {
+
+				e1.printStackTrace();
+			}
+
+		}
+
+		else if (e.getSource() == btnFirst) {
+			System.out.println("You pressed Last");
+
+			try {
+
+				if (rs.first()) {
+					// Update Text fields
+					ssnField.setText(rs.getString("ssn"));
+					dobField.setText(rs.getString("dob"));
+					nameField.setText(rs.getString("name"));
+					addressField.setText(rs.getString("address"));
+					salaryField.setText(rs.getString("salary"));
+					genderField.setText(rs.getString("gender"));
+					ssnTemp = ssnField.getText();
+				}
+			}
+			catch (SQLException e1) {
+
+				e1.printStackTrace();
+			}
+
+		}
+
 	}
 
 
@@ -344,6 +440,42 @@ public class Gui implements ActionListener {
 	public void update() {
 		rs = dbc.getRs();
 		st = dbc.getmyStmt();
+	}
+
+
+	/**
+	 * Validate input to help prevent errors
+	 */
+
+	public boolean ValidateInput() {
+
+		System.out.println("Validating" + ssnField.getText().length());
+		if (ssnField.getText().length() > 30 || ssnField.getText().length() <= 0 || !ssnField.getText().matches("[0-9]+")) {
+			JOptionPane.showMessageDialog(frame, "Invalid SSn entry, try again");
+			return false;
+		}
+		if (dobField.getText().length() > 12 || dobField.getText().length() <= 0) {
+			JOptionPane.showMessageDialog(frame, "Invalid DOB entry, try again");
+			return false;
+		}
+		if (nameField.getText().length() > 30 || nameField.getText().length() <= 0) {
+			JOptionPane.showMessageDialog(frame, "Invalid Name entry, try again");
+			return false;
+		}
+		if (addressField.getText().length() > 50 || addressField.getText().length() <= 0) {
+			JOptionPane.showMessageDialog(frame, "Invalid address entry, try again");
+			return false;
+		}
+		if (salaryField.getText().length() > 10 || salaryField.getText().length() <= 0 || !salaryField.getText().matches("[0-9]+")) {
+			JOptionPane.showMessageDialog(frame, "Invalid Salary entry, try again");
+			return false;
+		}
+		if (genderField.getText().length() > 10 || genderField.getText().length() <= 0) {
+			JOptionPane.showMessageDialog(frame, "Invalid gender entry, try again");
+			return false;
+		}
+
+		return true;
 	}
 
 }
